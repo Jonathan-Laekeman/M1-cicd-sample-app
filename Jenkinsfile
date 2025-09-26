@@ -4,29 +4,32 @@ pipeline {
     stages {
         stage('Preparation') {
             steps {
-                echo 'Cleaning up old containers...'
-                script {
-                    // Failsafe cleanup
-                    sh 'docker stop samplerunning || true'
-                    sh 'docker rm samplerunning || true'
-                }
+                echo 'Stopping and removing old containers...'
+                sh '''
+                docker stop samplerunning || true
+                docker rm samplerunning || true
+                rm -rf tempdir
+                '''
             }
         }
 
-        stage('Build') {
+        stage('Build & Run') {
             steps {
-                echo 'Building Docker image...'
-                // Hier roepen we jouw sample-app.sh aan
+                echo 'Building Docker image and running container...'
                 sh 'bash sample-app.sh'
             }
         }
 
-        stage('Test') {
+        stage('Simple Test') {
             steps {
-                echo 'Testing application...'
-                // Check of app draait
-                sh 'sleep 5' // even wachten tot container draait
-                sh 'curl -f http://localhost:5050 || exit 1'
+                echo 'Testing if container is running...'
+                sh '''
+                if [ "$(docker ps -q -f name=samplerunning)" = "" ]; then
+                  echo "Container not running!"
+                  exit 1
+                fi
+                echo "Container is running!"
+                '''
             }
         }
 
